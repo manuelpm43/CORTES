@@ -1,0 +1,222 @@
+-- =====================================================================
+-- 003_segmentacion.sql  ·  Cortes de carril
+-- Segmentación dinámica sobre los ejes calibrados (M en km).
+--
+-- ÚNICO punto de acoplamiento con los datos de BIDELAN: la vista
+-- cortes.v_ejes. Si cambia la tabla o la columna de geometría de los
+-- ejes, se toca solo esa vista.
+-- =====================================================================
+
+-- ---------------------------------------------------------------------
+-- Ejes calibrados (solo lectura)
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE VIEW cortes.v_ejes AS
+SELECT e.eje_nomenclatura           AS eje,
+       ST_Transform(e.geom, 25830)  AS geom
+FROM public.ejes_tronco e
+WHERE e.eje_nomenclatura IS NOT NULL
+  AND e.geom IS NOT NULL;
+
+-- Rango de PK y sentido de digitalización de cada eje. Se asume M
+-- monótona dentro de cada parte, por lo que basta con sus extremos.
+-- m_crece = la M aumenta en el sentido en que está digitalizada la línea.
+CREATE OR REPLACE VIEW cortes.v_ejes_rango AS
+SELECT e.eje,
+       min(least(ST_M(ST_StartPoint(d.geom)), ST_M(ST_EndPoint(d.geom))))::numeric(8,3)    AS pk_min,
+       max(greatest(ST_M(ST_StartPoint(d.geom)), ST_M(ST_EndPoint(d.geom))))::numeric(8,3) AS pk_max,
+       sum(ST_M(ST_EndPoint(d.geom)) - ST_M(ST_StartPoint(d.geom))) > 0                   AS m_crece,
+       count(*)                                                                            AS partes
+FROM cortes.v_ejes e
+CROSS JOIN LATERAL ST_Dump(e.geom) d
+WHERE ST_M(ST_StartPoint(d.geom)) IS NOT NULL
+GROUP BY e.eje;
+
+-- ---------------------------------------------------------------------
+-- PK numérico (km) -> texto "12+350"
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION cortes.pk_a_texto(p_pk numeric)
+RETURNS text
+LANGUAGE sql IMMUTABLE AS $$
+    SELECT CASE WHEN p_pk IS NULL THEN NULL ELSE
+        trunc(round(p_pk, 3))::bigint::text || '+' ||
+        lpad(((round(p_pk, 3) - trunc(round(p_pk, 3))) * 1000)::int::text, 3, '0')
+    END;
+$$;
+
+-- ---------------------------------------------------------------------
+-- Desplazamiento lateral por defecto de una lista de carriles (media).
+-- Vacío o con 'TODOS' -> 0 (eje).
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION cortes.desplazamiento_carriles(p_carriles text[])
+RETURNS numeric
+LANGUAGE sql STABLE AS $$
+    SELECT CASE
+        WHEN p_carriles IS NULL OR cardinality(p_carriles) = 0 OR 'TODOS' = ANY (p_carriles) THEN 0
+        ELSE coalesce((SELECT avg(c.desplazamiento_m) FROM cortes.carriles c WHERE c.codigo = ANY (p_carriles)), 0)
+    END;
+$$;
+
+-- ---------------------------------------------------------------------
+-- Segmentación: tramo del eje entre dos PK, desplazado lateralmente.
+--   p_desplazamiento_m > 0 = a la derecha del sentido de circulación.
+-- Sentido de circulación: eje "-1" PK crecientes, eje "-2" decrecientes.
+-- ST_LocateBetween desplaza a la IZQUIERDA de la digitalización con
+-- offset positivo, así que se ajusta el signo según m_crece.
+-- Devuelve NULL si el tramo cae fuera del eje o en un hueco.
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION cortes.segmentar(
+    p_eje               text,
+    p_pk_inicio         numeric,
+    p_pk_fin            numeric,
+    p_desplazamiento_m  numeric DEFAULT 0
+)
+RETURNS geometry(MultiLineString, 25830)
+LANGUAGE plpgsql STABLE AS $$
+DECLARE
+    v_geom      geometry;
+    v_m_crece   boolean;
+    v_sentido   integer;
+    v_offset    float8;
+    v_resultado geometry;
+BEGIN
+    SELECT ST_Collect(d.geom) INTO v_geom
+    FROM cortes.v_ejes e
+    CROSS JOIN LATERAL ST_Dump(e.geom) d
+    WHERE e.eje = p_eje;
+
+    IF v_geom IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    SELECT r.m_crece INTO v_m_crece FROM cortes.v_ejes_rango r WHERE r.eje = p_eje;
+    v_sentido := coalesce(substring(p_eje FROM '-(\d+)$')::integer, 1);
+
+    v_offset := coalesce(p_desplazamiento_m, 0);
+    -- Digitalizado a favor del tráfico: derecha = offset negativo.
+    IF v_m_crece = (v_sentido = 1) THEN
+        v_offset := -v_offset;
+    END IF;
+
+    v_resultado := ST_LocateBetween(
+        v_geom,
+        least(p_pk_inicio, p_pk_fin)::float8,
+        greatest(p_pk_inicio, p_pk_fin)::float8,
+        v_offset
+    );
+    v_resultado := ST_CollectionExtract(v_resultado, 2);
+
+    IF v_resultado IS NULL OR ST_IsEmpty(v_resultado) THEN
+        RETURN NULL;
+    END IF;
+
+    RETURN ST_SetSRID(ST_Multi(ST_Force2D(v_resultado)), 25830);
+END
+$$;
+
+-- ---------------------------------------------------------------------
+-- Trigger: valida PK/carriles y genera la geometría al insertar o al
+-- cambiar los campos de localización. Errores con SQLSTATE 23514
+-- (check_violation) para que la API los devuelva como 400.
+--
+-- El backend identifica al usuario en la transacción con
+--   SELECT set_config('cortes.usuario_id', '<id>', true);
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION cortes.tg_cortes_geometria()
+RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_eje        text;
+    v_rango      record;
+    v_usuario_id integer;
+    v_invalidos  text;
+BEGIN
+    v_usuario_id := nullif(current_setting('cortes.usuario_id', true), '')::integer;
+
+    IF TG_OP = 'INSERT' THEN
+        NEW.creado_por := coalesce(NEW.creado_por, v_usuario_id);
+        NEW.actualizado_por := coalesce(NEW.actualizado_por, v_usuario_id);
+    ELSE
+        NEW.actualizado_en := now();
+        NEW.actualizado_por := coalesce(v_usuario_id, NEW.actualizado_por);
+    END IF;
+
+    IF TG_OP = 'UPDATE'
+       AND NEW.carretera        IS NOT DISTINCT FROM OLD.carretera
+       AND NEW.sentido          IS NOT DISTINCT FROM OLD.sentido
+       AND NEW.pk_inicio        IS NOT DISTINCT FROM OLD.pk_inicio
+       AND NEW.pk_fin           IS NOT DISTINCT FROM OLD.pk_fin
+       AND NEW.carriles         IS NOT DISTINCT FROM OLD.carriles
+       AND NEW.desplazamiento_m IS NOT DISTINCT FROM OLD.desplazamiento_m THEN
+        RETURN NEW;  -- sin cambios de localización (regenerar_geometrias pasa por aquí)
+    END IF;
+
+    SELECT string_agg(c, ', ') INTO v_invalidos
+    FROM unnest(NEW.carriles) c
+    WHERE c NOT IN (SELECT codigo FROM cortes.carriles);
+    IF v_invalidos IS NOT NULL THEN
+        RAISE EXCEPTION 'Carril(es) no válido(s): %', v_invalidos
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    -- La columna generada "eje" aún no está calculada en un BEFORE trigger.
+    v_eje := NEW.carretera || '-' || NEW.sentido::text;
+
+    SELECT * INTO v_rango FROM cortes.v_ejes_rango WHERE eje = v_eje;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'No existe el eje calibrado %', v_eje
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF least(NEW.pk_inicio, NEW.pk_fin) < v_rango.pk_min - 0.001
+       OR greatest(NEW.pk_inicio, NEW.pk_fin) > v_rango.pk_max + 0.001 THEN
+        RAISE EXCEPTION 'PK fuera de rango en %: % – % (el eje va de % a %)',
+            v_eje,
+            cortes.pk_a_texto(NEW.pk_inicio), cortes.pk_a_texto(NEW.pk_fin),
+            cortes.pk_a_texto(v_rango.pk_min), cortes.pk_a_texto(v_rango.pk_max)
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    NEW.geom := cortes.segmentar(
+        v_eje, NEW.pk_inicio, NEW.pk_fin,
+        coalesce(NEW.desplazamiento_m, cortes.desplazamiento_carriles(NEW.carriles))
+    );
+
+    IF NEW.geom IS NULL THEN
+        RAISE EXCEPTION 'No se ha podido generar la geometría de % entre % y % (¿hueco en la calibración?)',
+            v_eje, cortes.pk_a_texto(NEW.pk_inicio), cortes.pk_a_texto(NEW.pk_fin)
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END
+$$;
+
+DROP TRIGGER IF EXISTS cortes_geometria ON cortes.cortes;
+CREATE TRIGGER cortes_geometria
+    BEFORE INSERT OR UPDATE ON cortes.cortes
+    FOR EACH ROW EXECUTE FUNCTION cortes.tg_cortes_geometria();
+
+-- ---------------------------------------------------------------------
+-- Regenerar todas las geometrías (tras recalibrar los ejes o cambiar
+-- desplazamientos de carriles). Los cortes que ya no encajan quedan con
+-- geom NULL y se cuentan en "sin_geometria".
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION cortes.regenerar_geometrias(
+    OUT actualizados  integer,
+    OUT sin_geometria integer
+)
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE cortes.cortes c
+    SET geom = cortes.segmentar(
+        c.eje, c.pk_inicio, c.pk_fin,
+        coalesce(c.desplazamiento_m, cortes.desplazamiento_carriles(c.carriles))
+    );
+    GET DIAGNOSTICS actualizados = ROW_COUNT;
+
+    SELECT count(*) INTO sin_geometria FROM cortes.cortes WHERE geom IS NULL;
+END
+$$;
+
+GRANT SELECT ON public.ejes_tronco TO cortes_app;
+GRANT SELECT ON cortes.v_ejes, cortes.v_ejes_rango TO cortes_app;
