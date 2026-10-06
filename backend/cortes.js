@@ -160,7 +160,7 @@ function obtenerCorte(cliente, id) {
 router.get('/catalogos', exigirUsuario, function (req, res, next) {
     Promise.all([
         db.query('SELECT codigo, nombre FROM cortes.carreteras ORDER BY orden'),
-        db.query('SELECT codigo, nombre, desplazamiento_m::float8 AS desplazamiento_m FROM cortes.carriles ORDER BY orden'),
+        db.query('SELECT codigo, nombre FROM cortes.carriles ORDER BY orden'),
         db.query('SELECT eje, pk_min::float8 AS pk_min, pk_max::float8 AS pk_max, partes::integer AS partes, tramos FROM cortes.v_ejes_rango ORDER BY eje')
     ])
         .then(function (r) {

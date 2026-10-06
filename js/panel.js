@@ -418,7 +418,7 @@ function mostrarFormularioCorte(feature) {
 
             <details class="opciones-avanzadas" ${p.desplazamiento_m !== null && p.desplazamiento_m !== undefined ? "open" : ""}>
                 <summary>Opciones avanzadas</summary>
-                <label class="campo-formulario">Desplazamiento lateral (m, + = derecha del sentido)
+                <label class="campo-formulario">Distancia a la derecha del eje (m)
                     <input type="number" name="desplazamiento_m" step="0.25"
                         value="${p.desplazamiento_m !== null && p.desplazamiento_m !== undefined ? p.desplazamiento_m : ""}"
                         placeholder="Automático según carriles">

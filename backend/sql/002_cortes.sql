@@ -22,26 +22,27 @@ INSERT INTO cortes.carreteras (codigo, nombre, orden) VALUES
 ON CONFLICT (codigo) DO NOTHING;
 
 -- ---------------------------------------------------------------------
--- Carriles. desplazamiento_m = distancia lateral al eje, en metros,
--- POSITIVA HACIA LA DERECHA del sentido de circulación. La función de
--- segmentación (003) traduce el signo según la digitalización del eje.
--- Valores orientativos (eje en el centro de una calzada de 2 carriles):
--- ajustar a la geometría real.
+-- Carriles. La posición lateral NO es fija: depende del número de
+-- carriles en el PK del corte (cortes.desplazamiento_carriles, en 003).
+-- El eje calibrado va por el borde interior de la calzada (junto a la
+-- mediana) y los carriles quedan a su derecha.
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cortes.carriles (
-    codigo           text         PRIMARY KEY,
-    nombre           text         NOT NULL,
-    desplazamiento_m numeric(5,2) NOT NULL DEFAULT 0,
-    orden            smallint     NOT NULL DEFAULT 0
+    codigo  text     PRIMARY KEY,
+    nombre  text     NOT NULL,
+    orden   smallint NOT NULL DEFAULT 0
 );
 
-INSERT INTO cortes.carriles (codigo, nombre, desplazamiento_m, orden) VALUES
-    ('IZQ',   'Carril izquierdo', -1.75, 1),
-    ('CEN',   'Carril central',    0.00, 2),
-    ('DER',   'Carril derecho',    1.75, 3),
-    ('ARCEN', 'Arcén',             4.50, 4),
-    ('TODOS', 'Calzada completa',  0.00, 5)
-ON CONFLICT (codigo) DO NOTHING;
+-- v0.8: el desplazamiento fijo por carril se sustituye por el cálculo.
+ALTER TABLE cortes.carriles DROP COLUMN IF EXISTS desplazamiento_m;
+
+INSERT INTO cortes.carriles (codigo, nombre, orden) VALUES
+    ('IZQ',   'Carril izquierdo', 1),
+    ('CEN',   'Carril central',   2),
+    ('DER',   'Carril derecho',   3),
+    ('ARCEN', 'Arcén derecho',    4),
+    ('TODOS', 'Calzada completa', 5)
+ON CONFLICT (codigo) DO UPDATE SET nombre = EXCLUDED.nombre, orden = EXCLUDED.orden;
 
 -- ---------------------------------------------------------------------
 -- Cortes

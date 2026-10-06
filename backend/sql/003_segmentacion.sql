@@ -66,16 +66,60 @@ FROM partes
 GROUP BY eje;
 
 -- ---------------------------------------------------------------------
--- Desplazamiento lateral por defecto de una lista de carriles (media).
--- Vacío o con 'TODOS' -> 0 (eje).
+-- Número de carriles de un eje en un PK, según el punto más cercano de
+-- public.geometria_pk_ejes (puntos montados sobre los ejes; m_eje en km).
+-- Sin dato -> 2.
 -- ---------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION cortes.desplazamiento_carriles(p_carriles text[])
-RETURNS numeric
+CREATE OR REPLACE FUNCTION cortes.numero_carriles(p_eje text, p_pk numeric)
+RETURNS integer
 LANGUAGE sql STABLE AS $$
-    SELECT CASE
-        WHEN p_carriles IS NULL OR cardinality(p_carriles) = 0 OR 'TODOS' = ANY (p_carriles) THEN 0
-        ELSE coalesce((SELECT avg(c.desplazamiento_m) FROM cortes.carriles c WHERE c.codigo = ANY (p_carriles)), 0)
-    END;
+    SELECT coalesce((
+        SELECT g."nº_de_carriles"
+        FROM public.geometria_pk_ejes g
+        WHERE regexp_replace(g.eje_nomenclatura, '^([^-]+)-\d+-(\d+)$', '\1-\2') = p_eje
+          AND g."nº_de_carriles" > 0
+          AND g.m_eje IS NOT NULL
+        ORDER BY abs(g.m_eje - p_pk)
+        LIMIT 1
+    ), 2);
+$$;
+
+-- ---------------------------------------------------------------------
+-- Desplazamiento lateral (m, + = derecha del sentido de circulación) del
+-- centro de los carriles afectados, en el PK indicado. El eje va por el
+-- borde interior de la calzada; carriles de 3,5 m hacia la derecha.
+--   IZQ   = 1.ª franja (junto a la mediana)   1,75
+--   CEN   = centro de la calzada              n·3,5/2
+--   DER   = último carril                     (n−0,5)·3,5
+--   ARCEN = arcén derecho                     n·3,5 + 1,25
+--   TODOS / vacío = centro de la calzada
+-- Varios carriles -> media.
+-- ---------------------------------------------------------------------
+DROP FUNCTION IF EXISTS cortes.desplazamiento_carriles(text[]);
+
+CREATE OR REPLACE FUNCTION cortes.desplazamiento_carriles(p_eje text, p_pk numeric, p_carriles text[])
+RETURNS numeric
+LANGUAGE plpgsql STABLE AS $$
+DECLARE
+    c_ancho_carril CONSTANT numeric := 3.5;
+    v_n            integer := cortes.numero_carriles(p_eje, p_pk);
+    v_media        numeric;
+BEGIN
+    IF p_carriles IS NULL OR cardinality(p_carriles) = 0 OR 'TODOS' = ANY (p_carriles) THEN
+        RETURN v_n * c_ancho_carril / 2;
+    END IF;
+
+    SELECT avg(CASE c
+                   WHEN 'IZQ'   THEN c_ancho_carril / 2
+                   WHEN 'CEN'   THEN v_n * c_ancho_carril / 2
+                   WHEN 'DER'   THEN (v_n - 0.5) * c_ancho_carril
+                   WHEN 'ARCEN' THEN v_n * c_ancho_carril + 1.25
+               END)
+    INTO v_media
+    FROM unnest(p_carriles) c;
+
+    RETURN round(coalesce(v_media, v_n * c_ancho_carril / 2), 2);
+END
 $$;
 
 -- ---------------------------------------------------------------------
@@ -200,7 +244,8 @@ BEGIN
 
     NEW.geom := cortes.segmentar(
         v_eje, NEW.pk_inicio, NEW.pk_fin,
-        coalesce(NEW.desplazamiento_m, cortes.desplazamiento_carriles(NEW.carriles))
+        coalesce(NEW.desplazamiento_m,
+                 cortes.desplazamiento_carriles(v_eje, (NEW.pk_inicio + NEW.pk_fin) / 2, NEW.carriles))
     );
 
     IF NEW.geom IS NULL THEN
@@ -232,7 +277,8 @@ BEGIN
     UPDATE cortes.cortes c
     SET geom = cortes.segmentar(
         c.eje, c.pk_inicio, c.pk_fin,
-        coalesce(c.desplazamiento_m, cortes.desplazamiento_carriles(c.carriles))
+        coalesce(c.desplazamiento_m,
+                 cortes.desplazamiento_carriles(c.eje, (c.pk_inicio + c.pk_fin) / 2, c.carriles))
     );
     GET DIAGNOSTICS actualizados = ROW_COUNT;
 
@@ -240,5 +286,5 @@ BEGIN
 END
 $$;
 
-GRANT SELECT ON public.ejes_tronco TO cortes_app;
+GRANT SELECT ON public.ejes_tronco, public.geometria_pk_ejes TO cortes_app;
 GRANT SELECT ON cortes.v_ejes, cortes.v_ejes_rango TO cortes_app;

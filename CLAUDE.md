@@ -7,7 +7,9 @@ Aplicación web para definir, gestionar y mostrar en mapa cortes de carril local
 - Ejes calibrados: `public.ejes_tronco`, de solo lectura. El código de eje está en `eje_nomenclatura` (`AP636-1`: carretera + sentido) y la **M en km**.
 - El acoplamiento con los ejes se hace **solo** a través de la vista `cortes.v_ejes` (003). Si cambia la tabla o la columna, se toca esa vista y se ejecuta `SELECT * FROM cortes.regenerar_geometrias();`.
 - PK guardados como `numeric(8,3)` en km y mostrados como `12+350` (`cortes.pk_a_texto`).
-- Sentido 1 = PK crecientes y sentido 2 = PK decrecientes. `desplazamiento_m > 0` va a la derecha del sentido de circulación. `segmentar()` corrige el signo según la digitalización del eje (`v_ejes_rango.m_crece`).
+- Sentido 1 = PK crecientes y sentido 2 = PK decrecientes. `desplazamiento_m > 0` va a la derecha del sentido de circulación. `segmentar()` corrige el signo según la digitalización del eje (`v_ejes_rango.m_crece`). Todos los ejes reales tienen `m_crece = t`, así que los de sentido 2 están digitalizados contra el tráfico.
+- El eje calibrado va por el **borde interior** de cada calzada (junto a la mediana) y los carriles, de 3,5 m, quedan a su derecha. El desplazamiento por carril se calcula con `cortes.desplazamiento_carriles(eje, pk, carriles)`, a partir de `nº_de_carriles` del punto de `public.geometria_pk_ejes` más cercano al PK medio del corte (`m_eje`, en km). Si no hay dato, se toman 2 carriles. `desplazamiento_m` en `cortes.cortes` solo se usa como ajuste manual.
+- `eje_nomenclatura` puede ser `CARRETERA-SENTIDO` o `CARRETERA-TRAMO-SENTIDO` (GI-20). `v_ejes` lo normaliza a `CARRETERA-SENTIDO`.
 - La geometría de `cortes.cortes` la genera el trigger `cortes_geometria`; no se escribe a mano. Los errores de validación salen con SQLSTATE `23514`, y la API los devuelve como 400.
 - La auditoría va por trigger (`SECURITY DEFINER`) y cortes_app solo puede leerla. En cada transacción de escritura, el backend debe ejecutar `set_config('cortes.usuario_id', id, true)` y `set_config('cortes.origen', 'manual'|'excel', true)`.
 
