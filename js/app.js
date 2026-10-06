@@ -39,8 +39,10 @@ const EXTENSION_INICIAL = [-2.62, 42.98, -1.72, 43.40];
 mapa.setBbox(extensionAMercator(EXTENSION_INICIAL));
 
 
-// Ejes de carretera (contexto). Se añade antes que los cortes para quedar debajo.
-const capaEjes = new IDEE.layer.WMS({
+// Ejes de carretera (contexto). Se añade antes que los cortes para quedar
+// debajo. En modo local no se pide: GeoServer está en el dominio de
+// producción, que el filtro corporativo bloquea.
+const capaEjes = esModoLocal ? null : new IDEE.layer.WMS({
     url: geoserverWmsUrl,
     name: capaEjesWmsNombre,
     legend: "Ejes de carretera",
@@ -48,7 +50,12 @@ const capaEjes = new IDEE.layer.WMS({
 }, {
     crossOrigin: null
 });
-mapa.addLayers(capaEjes);
+
+if (capaEjes) {
+    mapa.addLayers(capaEjes);
+} else {
+    document.getElementById("checkEjes").closest(".fila-capa").classList.add("oculto");
+}
 
 
 // Capas de cortes y de selección resaltada: se crean una vez y se les
@@ -245,5 +252,7 @@ document.getElementById("checkCortes").addEventListener("change", function (even
 });
 
 document.getElementById("checkEjes").addEventListener("change", function (evento) {
-    cambiarVisibilidadCapa(capaEjes, evento.target.checked);
+    if (capaEjes) {
+        cambiarVisibilidadCapa(capaEjes, evento.target.checked);
+    }
 });
