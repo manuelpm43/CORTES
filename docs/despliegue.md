@@ -54,6 +54,18 @@ curl https://cortes.geospatiallab.xyz/api/salud
 ## 6. Probar
 Abrir `https://cortes.geospatiallab.xyz/login.html` e iniciar sesión con la cuenta `ADMIN_EMAIL`.
 
+## 7. Proxy de Cloudflare (opcional)
+Hace falta si alguna red corporativa bloquea el dominio por ser «sitio nuevo». Con el proxy activo, el tráfico pasa por las IPs de Cloudflare y el filtro deja de cortarlo.
+1. Cloudflare → SSL/TLS → **Completo (estricto)**. Con «Flexible» se produce un bucle de redirecciones.
+2. IP real de los usuarios para el límite de intentos:
+   ```bash
+   cp /opt/cortes/docs/nginx-cloudflare-realip.conf /etc/nginx/conf.d/cloudflare-realip.conf
+   nginx -t && systemctl reload nginx
+   ```
+3. Activar la nube naranja en el registro `cortes`.
+4. Comprobar que la renovación del certificado sigue funcionando: `certbot renew --dry-run`.
+5. Cloudflare guarda en caché los `.js` y `.css`. Después de cada `git pull` que cambie el frontend: Caching → **Purgar todo** (o purgar esas URL).
+
 ## Actualizaciones
 ```bash
 cd /opt/cortes && git pull

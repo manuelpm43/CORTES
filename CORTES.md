@@ -1,5 +1,10 @@
 # CORTES · Registro de versiones
 
+## v0.6 · 2026-10-06 · Proxy de Cloudflare
+- Desplegado en `https://cortes.geospatiallab.xyz` (PM2 `cortes-api`, nginx y Let's Encrypt).
+- El filtro web de la red corporativa bloquea el dominio como «sitio nuevo», pero lo deja pasar con el proxy de Cloudflare activo.
+- `docs/nginx-cloudflare-realip.conf`: IP real del usuario (`CF-Connecting-IP`) para que el límite de intentos no se comparta. `despliegue.md`, apartado 7: modo SSL «Completo (estricto)», renovación y purgado de caché.
+
 ## v0.5 · 2026-10-06 · Ejes por tramos (GI-20)
 - `003`: `v_ejes` une los tramos `CARRETERA-TRAMO-SENTIDO` (GI20-1-1, GI20-2-1…) en un eje `CARRETERA-SENTIDO`. `v_ejes_rango` añade la columna `tramos` con el rango de cada parte, y el error de hueco la incluye.
 - `pk_a_texto` admite PK negativos (algunas calibraciones empiezan en −0+066).
