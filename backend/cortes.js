@@ -11,16 +11,18 @@ const router = express.Router();
 
 const ESTADOS = ['previsto', 'activo', 'finalizado'];
 
-const EXPRESION_ACTIVO_AHORA =
-    "(c.estado <> 'finalizado' AND c.fecha_inicio <= now() AND (c.fecha_fin IS NULL OR c.fecha_fin > now()))";
+// El estado se calcula con las fechas (cortes.estado_corte, en 005); la
+// columna c.estado solo guarda si se finalizó a mano.
+const EXPRESION_ESTADO = 'cortes.estado_corte(c.estado, c.fecha_inicio, c.fecha_fin)';
 
 const SELECT_CORTES =
     'SELECT c.id, c.carretera, ca.nombre AS carretera_nombre, c.sentido, c.eje, c.carriles,' +
     ' c.desplazamiento_m::float8 AS desplazamiento_m,' +
     ' c.pk_inicio::float8 AS pk_inicio, c.pk_fin::float8 AS pk_fin,' +
     ' cortes.pk_a_texto(c.pk_inicio) AS pk_inicio_texto, cortes.pk_a_texto(c.pk_fin) AS pk_fin_texto,' +
-    ' c.fecha_inicio, c.fecha_fin, c.tipo, c.motivo, c.estado,' +
-    ' ' + EXPRESION_ACTIVO_AHORA + ' AS activo_ahora,' +
+    ' c.fecha_inicio, c.fecha_fin, c.tipo, c.motivo,' +
+    ' ' + EXPRESION_ESTADO + ' AS estado,' +
+    " c.estado = 'finalizado' AS finalizado_manual," +
     ' c.observaciones, c.origen, c.ref_externa,' +
     ' c.creado_en, uc.email AS creado_por, c.actualizado_en, ua.email AS actualizado_por,' +
     ' ST_AsGeoJSON(ST_Transform(c.geom, 4326), 7)::json AS geometria' +
@@ -91,7 +93,8 @@ function validarCorte(datos) {
         fecha_fin: parsearFecha(datos.fecha_fin),
         tipo: textoOpcional(datos.tipo),
         motivo: textoOpcional(datos.motivo),
-        estado: textoOpcional(datos.estado) ? String(datos.estado).trim().toLowerCase() : 'previsto',
+        // Solo se guarda la finalización manual; el resto lo deciden las fechas.
+        estado: String(datos.estado || '').trim().toLowerCase() === 'finalizado' ? 'finalizado' : 'previsto',
         observaciones: textoOpcional(datos.observaciones),
         ref_externa: textoOpcional(datos.ref_externa)
     };
@@ -109,10 +112,6 @@ function validarCorte(datos) {
     if (corte.fecha_fin === undefined) { errores.push('Fecha de fin no válida'); }
     if (corte.fecha_inicio && corte.fecha_fin && corte.fecha_fin <= corte.fecha_inicio) {
         errores.push('La fecha de fin debe ser posterior a la de inicio');
-    }
-
-    if (ESTADOS.indexOf(corte.estado) === -1) {
-        errores.push('Estado no válido (' + ESTADOS.join(', ') + ')');
     }
 
     if (datos.desplazamiento_m !== null && datos.desplazamiento_m !== undefined && datos.desplazamiento_m !== '') {
@@ -189,7 +188,7 @@ router.get('/', exigirUsuario, function (req, res, next) {
     }
 
     const estados = listaParametro(req.query.estado).filter(function (e) { return ESTADOS.indexOf(e) !== -1; });
-    if (estados.length) { anadir('c.estado = ANY($?)', estados); }
+    if (estados.length) { anadir(EXPRESION_ESTADO + ' = ANY($?)', estados); }
 
     const desde = parsearFecha(req.query.desde);
     const hasta = parsearFecha(req.query.hasta);
@@ -200,7 +199,7 @@ router.get('/', exigirUsuario, function (req, res, next) {
     if (hasta) { anadir('c.fecha_inicio < $?', hasta); }
 
     if (req.query.activos === '1' || req.query.activos === 'true') {
-        condiciones.push(EXPRESION_ACTIVO_AHORA);
+        condiciones.push(EXPRESION_ESTADO + " = 'activo'");
     }
 
     if (req.query.bbox) {

@@ -1,5 +1,10 @@
 # CORTES · Registro de versiones
 
+## v0.9 · 2026-10-06 · Estado automático según fechas
+- `005`: `cortes.estado_corte(estado, inicio, fin)` devuelve previsto, activo o finalizado según la hora actual. La columna `cortes.estado` solo guarda la finalización manual. `v_cortes` usa el estado calculado.
+- API: `estado` calculado, `finalizado_manual`, y los filtros de estado y «activos» usan el cálculo. Desaparece `activo_ahora` (equivale a estado = activo).
+- Visor: sin el ● ni «En vigor ahora». En el formulario, Estado = «Según fechas» o «Finalizado».
+
 ## v0.8 · 2026-10-06 · Carriles según la sección real
 - El eje va por el borde interior de la calzada y los carriles, de 3,5 m, quedan a su derecha. La posición de cada carril se calcula con el número de carriles del PK (`public.geometria_pk_ejes.nº_de_carriles`, punto más cercano por `m_eje`): IZQ 1,75 · CEN n·3,5/2 · DER (n−0,5)·3,5 · ARCEN n·3,5+1,25.
 - `002`: `cortes.carriles` pierde el `desplazamiento_m` fijo. `003`: `numero_carriles()`, `desplazamiento_carriles(eje, pk, carriles)` y `GRANT SELECT` sobre `geometria_pk_ejes`.

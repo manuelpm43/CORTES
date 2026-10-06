@@ -24,8 +24,8 @@ function htmlEstado(propiedades) {
     const estado = propiedades.estado;
     let html = `<span class="etiqueta-estado" style="background: ${COLORES_ESTADO[estado]}">${escaparHtml(NOMBRES_ESTADO[estado] || estado)}</span>`;
 
-    if (propiedades.activo_ahora) {
-        html += ` <span class="etiqueta-activo-ahora">En vigor ahora</span>`;
+    if (propiedades.finalizado_manual) {
+        html += ` <span class="texto-ayuda">(finalizado a mano)</span>`;
     }
 
     return html;
@@ -328,7 +328,7 @@ function mostrarFormularioCorte(feature) {
 
     const esAlta = !feature;
     const p = esAlta
-        ? { carretera: catalogos.carreteras[0].codigo, sentido: 1, carriles: [], estado: "previsto" }
+        ? { carretera: catalogos.carreteras[0].codigo, sentido: 1, carriles: [] }
         : feature.properties;
 
     const opcionesCarretera = catalogos.carreteras.map(function (c) {
@@ -349,9 +349,11 @@ function mostrarFormularioCorte(feature) {
         `;
     }).join("");
 
-    const opcionesEstado = catalogos.estados.map(function (e) {
-        return `<option value="${e}" ${e === p.estado ? "selected" : ""}>${NOMBRES_ESTADO[e] || e}</option>`;
-    }).join("");
+    // El estado se calcula con las fechas; aquí solo se puede forzar el fin.
+    const opcionesEstado = `
+        <option value="automatico" ${p.finalizado_manual ? "" : "selected"}>Según fechas</option>
+        <option value="finalizado" ${p.finalizado_manual ? "selected" : ""}>Finalizado</option>
+    `;
 
     // Sugerencias de tipo a partir de los ya usados.
     const tiposUsados = Array.from(new Set(datosCortes.features

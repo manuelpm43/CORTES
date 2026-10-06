@@ -3,9 +3,25 @@
 -- Vistas publicadas en GeoServer (workspace "cortes") por WMS/WFS.
 -- =====================================================================
 
--- activo_ahora: no finalizado y now() dentro de [fecha_inicio, fecha_fin)
--- (fecha_fin NULL = sin fin previsto). Es independiente del campo
--- "estado", que se gestiona a mano; el visor usa ambos.
+-- ---------------------------------------------------------------------
+-- Estado de un corte, calculado con la hora actual:
+--   finalizado  si se finalizó a mano (cortes.estado = 'finalizado') o ya
+--               pasó fecha_fin
+--   activo      si ya empezó (fecha_fin NULL = sin fin previsto)
+--   previsto    si aún no ha empezado
+-- La columna cortes.estado solo guarda la finalización manual; cualquier
+-- otro valor significa "automático según fechas".
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION cortes.estado_corte(p_estado text, p_inicio timestamptz, p_fin timestamptz)
+RETURNS text
+LANGUAGE sql STABLE AS $$
+    SELECT CASE
+        WHEN p_estado = 'finalizado' OR (p_fin IS NOT NULL AND p_fin <= now()) THEN 'finalizado'
+        WHEN p_inicio <= now() THEN 'activo'
+        ELSE 'previsto'
+    END;
+$$;
+
 CREATE OR REPLACE VIEW cortes.v_cortes AS
 SELECT c.id,
        c.carretera,
@@ -22,10 +38,8 @@ SELECT c.id,
        c.fecha_fin,
        c.tipo,
        c.motivo,
-       c.estado,
-       (c.estado <> 'finalizado'
-        AND c.fecha_inicio <= now()
-        AND (c.fecha_fin IS NULL OR c.fecha_fin > now()))  AS activo_ahora,
+       cortes.estado_corte(c.estado, c.fecha_inicio, c.fecha_fin)               AS estado,
+       cortes.estado_corte(c.estado, c.fecha_inicio, c.fecha_fin) = 'activo'    AS activo_ahora,
        c.observaciones,
        c.origen,
        c.actualizado_en,

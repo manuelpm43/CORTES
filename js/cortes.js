@@ -268,7 +268,7 @@ function pintarTabla() {
         const celdas = COLUMNAS_TABLA.map(function (columna) {
 
             if (columna.campo === "estado") {
-                return `<td><span class="punto-estado" style="background: ${COLORES_ESTADO[p.estado]}"></span>${escaparHtml(NOMBRES_ESTADO[p.estado] || p.estado)}${p.activo_ahora ? " ●" : ""}</td>`;
+                return `<td><span class="punto-estado" style="background: ${COLORES_ESTADO[p.estado]}"></span>${escaparHtml(NOMBRES_ESTADO[p.estado] || p.estado)}</td>`;
             }
 
             const texto = columna.texto ? columna.texto(p) : p[columna.campo];
@@ -355,7 +355,7 @@ function filasExportacion() {
             "Tipo": p.tipo || "",
             "Motivo": p.motivo || "",
             "Estado": NOMBRES_ESTADO[p.estado] || p.estado,
-            "En vigor ahora": p.activo_ahora ? "Sí" : "No",
+            "Finalizado a mano": p.finalizado_manual ? "Sí" : "No",
             "Observaciones": p.observaciones || "",
             "Origen": p.origen,
             "Ref. externa": p.ref_externa || "",
