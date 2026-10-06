@@ -1,8 +1,11 @@
 // Configuración común y acceso al backend de CORTES.
-// Mismo subdominio que el visor: nginx hace proxy de /api y /geoserver.
-const urlBase = 'https://cortes.geospatiallab.xyz';
-const apiUrl = urlBase + '/api';
-const geoserverWmsUrl = urlBase + '/geoserver/bidelan/wms';
+// En producción, nginx hace proxy de /api y /geoserver en el mismo
+// subdominio. En modo local (npm run local, http://localhost:4100) el
+// backend sirve también el frontend y la API va al mismo origen.
+const urlProduccion = 'https://cortes.geospatiallab.xyz';
+const esModoLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+const apiUrl = (esModoLocal ? location.origin : urlProduccion) + '/api';
+const geoserverWmsUrl = urlProduccion + '/geoserver/bidelan/wms';
 
 // Capa WMS de ejes de contexto (solo visual; la segmentación usa la BD).
 const capaEjesWmsNombre = 'bidelan:tramos_calibrados_prueba';

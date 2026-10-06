@@ -1,5 +1,6 @@
 // API de cortes de carril. Detrás de nginx: /api/ -> 127.0.0.1:4100
-require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const express = require('express');
 const cors = require('cors');
@@ -61,6 +62,19 @@ app.use('/api', function (req, res) {
     res.status(404).json({ error: 'Ruta no encontrada' });
 });
 
+// Modo local (MODO_LOCAL=1): sirve el frontend desde el propio backend para
+// trabajar sin nginx. Solo las carpetas y páginas públicas, nunca backend/.
+if (process.env.MODO_LOCAL === '1') {
+    const raiz = path.join(__dirname, '..');
+    ['css', 'js', 'img'].forEach(function (carpeta) {
+        app.use('/' + carpeta, express.static(path.join(raiz, carpeta)));
+    });
+    ['index.html', 'login.html', 'admin.html'].forEach(function (pagina) {
+        app.get('/' + pagina, function (req, res) { res.sendFile(path.join(raiz, pagina)); });
+    });
+    app.get('/', function (req, res) { res.redirect('/index.html'); });
+}
+
 // Errores: los de validación de la BD se devuelven al cliente; el resto, 500.
 app.use(function (err, req, res, next) {
     if (res.headersSent) { return next(err); }
@@ -86,4 +100,7 @@ app.use(function (err, req, res, next) {
 
 app.listen(PUERTO, HOST, function () {
     console.log('cortes-api escuchando en http://' + HOST + ':' + PUERTO);
+    if (process.env.MODO_LOCAL === '1') {
+        console.log('Modo local: abre http://localhost:' + PUERTO + '/login.html');
+    }
 });

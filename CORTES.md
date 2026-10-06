@@ -1,5 +1,10 @@
 # CORTES · Registro de versiones
 
+## v0.7 · 2026-10-06 · Modo local
+- El filtro corporativo (Endpoint Protection Plus, «Sitios nuevos») bloquea todo `*.geospatiallab.xyz`, también con el proxy de Cloudflare. El puerto 5432 del VPS sí está abierto.
+- `MODO_LOCAL=1`: el backend sirve el frontend (solo `css/`, `js/`, `img/` y las páginas) en `http://localhost:4100` usando la BD real.
+- `js/config.js`: en `localhost`, la API se llama en el mismo origen.
+
 ## v0.6 · 2026-10-06 · Proxy de Cloudflare
 - Desplegado en `https://cortes.geospatiallab.xyz` (PM2 `cortes-api`, nginx y Let's Encrypt).
 - El filtro web de la red corporativa bloquea el dominio como «sitio nuevo», pero lo deja pasar con el proxy de Cloudflare activo.

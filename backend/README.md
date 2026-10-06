@@ -13,6 +13,15 @@ pm2 save
 ```
 Antes hay que haber ejecutado los scripts `sql/001…005` (ver [../CLAUDE.md](../CLAUDE.md)).
 
+## Modo local (PC de desarrollo)
+Para trabajar sin nginx, por ejemplo cuando el filtro web corporativo bloquea `*.geospatiallab.xyz`. El backend corre en el PC, usa la BD real del VPS (puerto 5432) y sirve también el frontend.
+```
+# backend/.env: MODO_LOCAL=1, PGHOST=217.71.202.62, PGPASSWORD=<el del servidor>,
+#               ORIGEN_PERMITIDO=http://localhost:4100, JWT_SECRETO propio
+npm start   →   http://localhost:4100/login.html
+```
+`js/config.js` detecta `localhost` y llama a la API en el mismo origen. Solo se sirven `css/`, `js/`, `img/` y las tres páginas; nunca `backend/`. El WMS de ejes sigue apuntando a producción, así que esa capa no se ve si el dominio está bloqueado.
+
 ## Autenticación
 - `Authorization: Bearer <token>`. El JWT lleva `{ id, email, rol }` y está firmado con `JWT_SECRETO` (HS256). Ese secreto es **distinto del de BIDELAN**.
 - En cada petición se comprueba en la BD que el usuario sigue aprobado y se toma su rol actual. Una baja o un cambio de rol tienen efecto inmediato.
