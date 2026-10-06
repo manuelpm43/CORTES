@@ -1,5 +1,9 @@
 # CORTES · Registro de versiones
 
+## v0.4 · 2026-10-06 · Guía de despliegue
+- `docs/despliegue.md`: DNS, SQL, backend con PM2, nginx y Certbot, paso a paso.
+- `docs/nginx-cortes.conf`: sitio `cortes.geospatiallab.xyz` (estáticos desde `/opt/cortes`, `/api/` → 4100, `/geoserver/` → 8080; bloquea `backend`, `sql`, `docs`, `.git`, ficheros ocultos y `.md`).
+
 ## v0.3 · 2026-10-06 · Fase 3: Visor
 - `login.html` y `js/auth.js`: login y registro contra `/api/auth`, con el token en `localStorage.cortesToken`.
 - `index.html`: el acceso exige sesión. Barra lateral con sesión, filtros, capas, edición (editor/admin) y exportación. Mapa API-IDEE con fondos del IGN y tabla plegable debajo.
