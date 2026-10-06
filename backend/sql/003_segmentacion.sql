@@ -8,11 +8,30 @@
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
+-- PK numérico (km) -> texto "12+350" (negativos: "-0+066", hay ejes cuya
+-- calibración empieza unos metros antes de 0)
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION cortes.pk_a_texto(p_pk numeric)
+RETURNS text
+LANGUAGE sql IMMUTABLE AS $$
+    SELECT CASE WHEN p_pk IS NULL THEN NULL ELSE
+        CASE WHEN round(p_pk, 3) < 0 THEN '-' ELSE '' END ||
+        trunc(abs(round(p_pk, 3)))::bigint::text || '+' ||
+        lpad(((abs(round(p_pk, 3)) - trunc(abs(round(p_pk, 3)))) * 1000)::int::text, 3, '0')
+    END;
+$$;
+
+-- ---------------------------------------------------------------------
 -- Ejes calibrados (solo lectura)
+-- eje_nomenclatura es "CARRETERA-SENTIDO" (AP8-1) o, en carreteras con
+-- varios tramos calibrados por separado, "CARRETERA-TRAMO-SENTIDO"
+-- (GI20-2-1). Los tramos se unen en un único eje "CARRETERA-SENTIDO";
+-- los PK entre tramos quedan como hueco.
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE VIEW cortes.v_ejes AS
-SELECT e.eje_nomenclatura           AS eje,
-       ST_Transform(e.geom, 25830)  AS geom
+SELECT regexp_replace(e.eje_nomenclatura, '^([^-]+)-\d+-(\d+)$', '\1-\2') AS eje,
+       ST_Transform(e.geom, 25830)                                        AS geom,
+       e.eje_nomenclatura                                                 AS eje_origen
 FROM public.ejes_tronco e
 WHERE e.eje_nomenclatura IS NOT NULL
   AND e.geom IS NOT NULL;
@@ -20,28 +39,26 @@ WHERE e.eje_nomenclatura IS NOT NULL
 -- Rango de PK y sentido de digitalización de cada eje. Se asume M
 -- monótona dentro de cada parte, por lo que basta con sus extremos.
 -- m_crece = la M aumenta en el sentido en que está digitalizada la línea.
+-- tramos  = rangos de cada parte, para avisar de huecos (GI-20).
 CREATE OR REPLACE VIEW cortes.v_ejes_rango AS
-SELECT e.eje,
-       min(least(ST_M(ST_StartPoint(d.geom)), ST_M(ST_EndPoint(d.geom))))::numeric(8,3)    AS pk_min,
-       max(greatest(ST_M(ST_StartPoint(d.geom)), ST_M(ST_EndPoint(d.geom))))::numeric(8,3) AS pk_max,
-       sum(ST_M(ST_EndPoint(d.geom)) - ST_M(ST_StartPoint(d.geom))) > 0                   AS m_crece,
-       count(*)                                                                            AS partes
-FROM cortes.v_ejes e
-CROSS JOIN LATERAL ST_Dump(e.geom) d
-WHERE ST_M(ST_StartPoint(d.geom)) IS NOT NULL
-GROUP BY e.eje;
-
--- ---------------------------------------------------------------------
--- PK numérico (km) -> texto "12+350"
--- ---------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION cortes.pk_a_texto(p_pk numeric)
-RETURNS text
-LANGUAGE sql IMMUTABLE AS $$
-    SELECT CASE WHEN p_pk IS NULL THEN NULL ELSE
-        trunc(round(p_pk, 3))::bigint::text || '+' ||
-        lpad(((round(p_pk, 3) - trunc(round(p_pk, 3))) * 1000)::int::text, 3, '0')
-    END;
-$$;
+WITH partes AS (
+    SELECT e.eje,
+           least(ST_M(ST_StartPoint(d.geom)), ST_M(ST_EndPoint(d.geom)))    AS m_inicio,
+           greatest(ST_M(ST_StartPoint(d.geom)), ST_M(ST_EndPoint(d.geom))) AS m_fin,
+           ST_M(ST_EndPoint(d.geom)) - ST_M(ST_StartPoint(d.geom))          AS m_avance
+    FROM cortes.v_ejes e
+    CROSS JOIN LATERAL ST_Dump(e.geom) d
+    WHERE ST_M(ST_StartPoint(d.geom)) IS NOT NULL
+)
+SELECT eje,
+       min(m_inicio)::numeric(8,3) AS pk_min,
+       max(m_fin)::numeric(8,3)    AS pk_max,
+       sum(m_avance) > 0           AS m_crece,
+       count(*)                    AS partes,
+       string_agg(cortes.pk_a_texto(m_inicio::numeric) || ' a ' || cortes.pk_a_texto(m_fin::numeric),
+                  ', ' ORDER BY m_inicio) AS tramos
+FROM partes
+GROUP BY eje;
 
 -- ---------------------------------------------------------------------
 -- Desplazamiento lateral por defecto de una lista de carriles (media).
@@ -182,8 +199,8 @@ BEGIN
     );
 
     IF NEW.geom IS NULL THEN
-        RAISE EXCEPTION 'No se ha podido generar la geometría de % entre % y % (¿hueco en la calibración?)',
-            v_eje, cortes.pk_a_texto(NEW.pk_inicio), cortes.pk_a_texto(NEW.pk_fin)
+        RAISE EXCEPTION 'No hay eje calibrado en % entre % y %. Tramos calibrados: %',
+            v_eje, cortes.pk_a_texto(NEW.pk_inicio), cortes.pk_a_texto(NEW.pk_fin), v_rango.tramos
             USING ERRCODE = 'check_violation';
     END IF;
 

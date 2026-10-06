@@ -1,5 +1,11 @@
 # CORTES · Registro de versiones
 
+## v0.5 · 2026-10-06 · Ejes por tramos (GI-20)
+- `003`: `v_ejes` une los tramos `CARRETERA-TRAMO-SENTIDO` (GI20-1-1, GI20-2-1…) en un eje `CARRETERA-SENTIDO`. `v_ejes_rango` añade la columna `tramos` con el rango de cada parte, y el error de hueco la incluye.
+- `pk_a_texto` admite PK negativos (algunas calibraciones empiezan en −0+066).
+- El formulario muestra los tramos calibrados del eje elegido.
+- Datos reales comprobados: `ejes_tronco.geom` es LINESTRINGM 25830 y todos los ejes, también los de sentido 2, tienen la M creciente en el sentido de digitalización.
+
 ## v0.4 · 2026-10-06 · Guía de despliegue
 - `docs/despliegue.md`: DNS, SQL, backend con PM2, nginx y Certbot, paso a paso.
 - `docs/nginx-cortes.conf`: sitio `cortes.geospatiallab.xyz` (estáticos desde `/opt/cortes`, `/api/` → 4100, `/geoserver/` → 8080; bloquea `backend`, `sql`, `docs`, `.git`, ficheros ocultos y `.md`).

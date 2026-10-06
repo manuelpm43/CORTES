@@ -311,15 +311,12 @@ function textoRangoEje(carretera, sentido) {
         return `No hay eje calibrado ${carretera}-${sentido}.`;
     }
 
-    return `Eje ${eje.eje}: PK ${pkATexto(eje.pk_min)} a ${pkATexto(eje.pk_max)}`;
+    // Carreteras calibradas por tramos (GI-20): se listan para ver los huecos.
+    if (eje.partes > 1) {
+        return `Eje ${eje.eje}: tramos ${eje.tramos}`;
+    }
 
-}
-
-
-function pkATexto(pk) {
-
-    const metrosTotales = Math.round(pk * 1000);
-    return `${Math.floor(metrosTotales / 1000)}+${String(metrosTotales % 1000).padStart(3, "0")}`;
+    return `Eje ${eje.eje}: PK ${eje.tramos}`;
 
 }
 
