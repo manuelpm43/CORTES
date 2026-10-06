@@ -3,7 +3,7 @@
 Aplicación web para definir, gestionar y mostrar en mapa cortes de carril localizados por PK inicio–PK fin sobre los ejes calibrados. La especificación completa (v0.3) está en [docs/especificacion.md](docs/especificacion.md). Sigue el patrón de BIDELAN, pero **con usuarios independientes**.
 
 ## Datos
-- BD `BIDELAN_Nube` (PostgreSQL + PostGIS, VPS 217.71.202.62). Todo lo de la app va en el esquema `cortes`.
+- BD: la misma en la que está `public.ejes_tronco` (PostgreSQL + PostGIS, VPS 217.71.202.62; en QGIS la conexión se llama «BIDELAN_Nube», pero ese no es necesariamente el nombre de la base de datos). Ningún script lleva el nombre escrito. Todo lo de la app va en el esquema `cortes`.
 - Ejes calibrados: `public.ejes_tronco`, de solo lectura. El código de eje está en `eje_nomenclatura` (`AP636-1`: carretera + sentido) y la **M en km**.
 - El acoplamiento con los ejes se hace **solo** a través de la vista `cortes.v_ejes` (003). Si cambia la tabla o la columna, se toca esa vista y se ejecuta `SELECT * FROM cortes.regenerar_geometrias();`.
 - PK guardados como `numeric(8,3)` en km y mostrados como `12+350` (`cortes.pk_a_texto`).
@@ -14,10 +14,16 @@ Aplicación web para definir, gestionar y mostrar en mapa cortes de carril local
 ## SQL
 Scripts en `backend/sql/`, idempotentes y ejecutados en orden 001→005 con un rol administrador:
 ```
-psql -d BIDELAN_Nube -f backend/sql/001_usuarios.sql   # ... hasta 005
+psql -d <bd_ejes> -f backend/sql/001_usuarios.sql      # ... hasta 005
 ALTER ROLE cortes_app PASSWORD '...';                   # a mano, nunca en git
 ```
 Comprobaciones en [docs/verificacion_fase1.sql](docs/verificacion_fase1.sql).
+
+## Frontend (`index.html`, `login.html`)
+- Scripts globales sin módulos, que se cargan en este orden: `config.js` (URLs, `peticionApi`, sesión, colores y utilidades), `app.js` (mapa API-IDEE y capas), `panel.js` (ficha, formulario e historial), `filtros.js` y `cortes.js` (arranque, carga, tabla y exportación).
+- Los cortes se pintan desde la API (GeoJSON 4326) con `IDEE.layer.GeoJSON`, y no desde el WMS de GeoServer. Así el mapa y la tabla usan exactamente los mismos filtros y los datos solo se ven con sesión.
+- **API-IDEE:** las capas de cortes y de selección se crean **una sola vez** y se actualizan con `setSource`. Si se recrean, el gestor de selección falla (`prevSelectedFeatures_ … is not iterable`). `setSource` descarta el estilo y carga en diferido, así que el estilo se vuelve a aplicar con un objeto nuevo en el evento `IDEE.evt.LOAD` (`cambiarDatosCapa`).
+- El WMS de GeoServer solo se usa para los ejes de contexto (`capaEjesWmsNombre` en `config.js`).
 
 ## Convenciones
 - Frontend en HTML, CSS y JS puro, sin bundler. Backend en Node/Express con `pg`.
@@ -30,6 +36,6 @@ Comprobaciones en [docs/verificacion_fase1.sql](docs/verificacion_fase1.sql).
 ## Fases
 1. SQL y segmentación ✔ (v0.1)
 2. API con auth ✔ (v0.2, rutas en [backend/README.md](backend/README.md))
-3. Visor
+3. Visor ✔ (v0.3)
 4. Importación del Excel
 5. Admin y despliegue (`cortes.geospatiallab.xyz`, nginx, PM2 `cortes-api` en el puerto 4100, `/opt/cortes`)

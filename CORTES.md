@@ -1,5 +1,15 @@
 # CORTES · Registro de versiones
 
+## v0.3 · 2026-10-06 · Fase 3: Visor
+- `login.html` y `js/auth.js`: login y registro contra `/api/auth`, con el token en `localStorage.cortesToken`.
+- `index.html`: el acceso exige sesión. Barra lateral con sesión, filtros, capas, edición (editor/admin) y exportación. Mapa API-IDEE con fondos del IGN y tabla plegable debajo.
+- `js/app.js`: capa de cortes en GeoJSON coloreada por estado, halo de selección, ejes de contexto por WMS y zoom a un corte.
+- `js/filtros.js`: carretera, sentido, estado (por defecto previstos y activos), periodo y «solo activos ahora».
+- `js/cortes.js`: carga desde `/api/cortes` y recarga cada 5 min. Tabla ordenable y sincronizada con el mapa en los dos sentidos. Exportación a Excel (SheetJS), CSV (`;` + BOM) y GeoJSON.
+- `js/panel.js`: ficha emergente arrastrable, formulario de alta y edición (con el rango de PK del eje), finalizar, historial de auditoría y eliminar (solo admin).
+- SQL: `001` ya no lleva escrito el nombre de la BD (`GRANT CONNECT` sobre `current_database()`).
+- Probado en Edge headless con una API simulada.
+
 ## v0.2 · 2026-10-06 · Fase 2: API con autenticación
 - Backend Express (`server.js`): `trust proxy`, CORS limitado a `ORIGEN_PERMITIDO`, límite de 20 intentos cada 15 min en `/api/auth`, y los errores de la BD (23514, 23503…) se traducen a 400 o 409.
 - `auth.js`: registro (pendiente de aprobación), login con bcrypt y JWT propio (`{id, email, rol}`), y `/yo`.

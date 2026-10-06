@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CORTES · Acceso</title>
+
+    <link rel="stylesheet" href="css/login.css">
+</head>
+
+<body>
+
+    <div id="contenedorAuth">
+
+        <section id="cabeceraAuth">
+            <span class="logo-icono logo-texto">🚧</span>
+            <div>
+                <h1>CORTES</h1>
+                <p>Cortes de carril AP-8 · AP-1 · GI-20 · AP-636</p>
+            </div>
+        </section>
+
+        <div class="tarjeta-auth">
+
+            <div class="pestanas-auth">
+                <button type="button" class="pestana-auth activa" id="btnPestanaLogin">
+                    Iniciar sesión
+                </button>
+                <button type="button" class="pestana-auth" id="btnPestanaRegistro">
+                    Crear cuenta
+                </button>
+            </div>
+
+            <!-- FORMULARIO LOGIN -->
+            <form id="formularioLogin" class="formulario-auth" novalidate>
+
+                <div class="campo-auth">
+                    <label for="loginEmail">Correo electrónico</label>
+                    <input type="email" id="loginEmail" name="email" autocomplete="username" required>
+                </div>
+
+                <div class="campo-auth">
+                    <label for="loginPassword">Contraseña</label>
+                    <input type="password" id="loginPassword" name="password" autocomplete="current-password" required>
+                </div>
+
+                <p class="mensaje-auth" id="mensajeLogin"></p>
+
+                <button type="submit" class="btn-auth" id="btnSubmitLogin">Iniciar sesión</button>
+
+            </form>
+
+            <!-- FORMULARIO REGISTRO -->
+            <form id="formularioRegistro" class="formulario-auth oculto" novalidate>
+
+                <div class="campo-auth">
+                    <label for="registroNombre">Nombre</label>
+                    <input type="text" id="registroNombre" name="nombre" autocomplete="name" required>
+                </div>
+
+                <div class="campo-auth">
+                    <label for="registroEmail">Correo electrónico</label>
+                    <input type="email" id="registroEmail" name="email" autocomplete="username" required>
+                </div>
+
+                <div class="campo-auth">
+                    <label for="registroPassword">Contraseña</label>
+                    <input type="password" id="registroPassword" name="password" autocomplete="new-password" required minlength="8">
+                </div>
+
+                <div class="campo-auth">
+                    <label for="registroPasswordConfirmar">Confirmar contraseña</label>
+                    <input type="password" id="registroPasswordConfirmar" name="passwordConfirmar" autocomplete="new-password" required minlength="8">
+                </div>
+
+                <p class="mensaje-auth" id="mensajeRegistro"></p>
+
+                <button type="submit" class="btn-auth" id="btnSubmitRegistro">Crear cuenta</button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+
+</body>
+
+</html>

@@ -2,7 +2,8 @@
 -- 001_usuarios.sql  ·  Cortes de carril
 -- Esquema propio, rol de aplicación y tabla de usuarios (independiente
 -- de BIDELAN). Ejecutar con un rol con permisos de creación de roles
--- (p. ej. postgres) sobre la base de datos BIDELAN_Nube.
+-- (p. ej. postgres) sobre la base de datos donde están los ejes
+-- calibrados (public.ejes_tronco).
 -- =====================================================================
 
 CREATE EXTENSION IF NOT EXISTS postgis;
@@ -20,7 +21,12 @@ BEGIN
 END
 $$;
 
-GRANT CONNECT ON DATABASE "BIDELAN_Nube" TO cortes_app;
+-- Base de datos actual (la de los ejes calibrados, sin escribir su nombre).
+DO $$
+BEGIN
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO cortes_app', current_database());
+END
+$$;
 GRANT USAGE ON SCHEMA cortes TO cortes_app;
 
 -- Aislamiento: cortes_app no debe ver los usuarios de BIDELAN.

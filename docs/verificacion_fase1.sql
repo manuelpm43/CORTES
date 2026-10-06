@@ -1,5 +1,5 @@
 -- =====================================================================
--- Comprobaciones de la fase 1 (ejecutar en BIDELAN_Nube)
+-- Comprobaciones de la fase 1 (ejecutar en la BD de public.ejes_tronco)
 -- =====================================================================
 
 -- 0. ANTES de ejecutar 003: confirmar nombre/tipo/SRID de la geometría

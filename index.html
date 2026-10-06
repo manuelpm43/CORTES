@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CORTES · Cortes de carril</title>
+
+    <link rel="stylesheet" href="https://componentes.idee.es/api-idee/assets/css/apiidee.ol.min.css">
+    <link rel="stylesheet" href="css/estilos.css">
+</head>
+
+<body>
+
+    <div id="app">
+
+        <aside id="sidebar">
+
+            <!-- CABECERA -->
+            <section id="logo">
+                <span class="logo-icono logo-texto">🚧</span>
+                <div>
+                    <h1>CORTES</h1>
+                    <p>Cortes de carril AP-8 · AP-1 · GI-20 · AP-636</p>
+                </div>
+            </section>
+
+            <!-- SESIÓN -->
+            <section class="bloque-sesion">
+                <span id="textoUsuario" class="texto-usuario">Comprobando sesión…</span>
+                <a id="enlaceAdmin" class="enlace-sesion oculto" href="admin.html">Admin</a>
+                <button id="btnCerrarSesion" class="enlace-sesion" type="button">Salir</button>
+            </section>
+
+            <!-- FILTROS -->
+            <section class="bloque bloque-filtros">
+
+                <h2>🎚️ FILTROS</h2>
+
+                <label class="fila-capa fila-activos-ahora">
+                    <input id="filtroActivosAhora" type="checkbox">
+                    <span class="simbolo-capa simbolo-pulso"></span>
+                    Solo activos ahora
+                </label>
+
+                <div class="fila-filtro">
+                    <span class="etiqueta-filtro">Carretera</span>
+                    <div id="filtroCarreteras" class="grupo-casillas"></div>
+                </div>
+
+                <div class="fila-filtro">
+                    <label class="etiqueta-filtro" for="filtroSentido">Sentido</label>
+                    <select id="filtroSentido">
+                        <option value="">Ambos</option>
+                        <option value="1">1 · Creciente</option>
+                        <option value="2">2 · Decreciente</option>
+                    </select>
+                </div>
+
+                <div class="fila-filtro">
+                    <span class="etiqueta-filtro">Estado</span>
+                    <div id="filtroEstados"></div>
+                </div>
+
+                <div class="fila-filtro">
+                    <span class="etiqueta-filtro">Periodo</span>
+                    <div class="fila-fechas">
+                        <input id="filtroDesde" type="date" aria-label="Desde">
+                        <span>–</span>
+                        <input id="filtroHasta" type="date" aria-label="Hasta">
+                    </div>
+                </div>
+
+                <button id="btnLimpiarFiltros" class="btn-ficha" type="button">Limpiar filtros</button>
+
+            </section>
+
+            <!-- CAPAS -->
+            <section class="bloque bloque-capas">
+
+                <h2>📂 CAPAS</h2>
+
+                <label class="fila-capa">
+                    <input id="checkCortes" type="checkbox" checked>
+                    <span class="simbolo-capa simbolo-linea simbolo-cortes"></span>
+                    CORTES DE CARRIL
+                </label>
+
+                <label class="fila-capa">
+                    <input id="checkEjes" type="checkbox" checked>
+                    <span class="simbolo-capa simbolo-linea"></span>
+                    EJES DE CARRETERA
+                </label>
+
+            </section>
+
+            <!-- EDICIÓN (editor / admin) -->
+            <section id="bloqueEdicion" class="bloque bloque-edicion oculto">
+
+                <h2>✏️ EDICIÓN</h2>
+
+                <button id="btnNuevoCorte" class="btn-ficha btn-principal btn-bloque" type="button">+ Nuevo corte</button>
+                <button id="btnImportarExcel" class="btn-ficha btn-bloque" type="button" disabled>Importar Excel</button>
+                <p class="texto-grupo-pendiente">Importación: próximamente</p>
+
+            </section>
+
+            <!-- EXPORTAR -->
+            <section class="bloque bloque-exportar">
+
+                <h2>💾 EXPORTAR</h2>
+
+                <p class="texto-ayuda">Se exportan los cortes filtrados.</p>
+
+                <div class="fila-botones">
+                    <button id="btnExportarExcel" class="btn-ficha" type="button">Excel</button>
+                    <button id="btnExportarCsv" class="btn-ficha" type="button">CSV</button>
+                    <button id="btnExportarGeojson" class="btn-ficha" type="button">GeoJSON</button>
+                </div>
+
+            </section>
+
+        </aside>
+
+        <main id="main">
+
+            <div id="mapa" class="m-container"></div>
+
+            <!-- TABLA DE CORTES -->
+            <section id="panelTabla" class="panel-tabla">
+
+                <div class="cabecera-tabla">
+                    <button id="btnPlegarTabla" class="btn-plegar-tabla" type="button" aria-label="Plegar tabla">▾</button>
+                    <span class="titulo-tabla">Cortes <span id="contadorCortes" class="contador-cortes">0</span></span>
+                    <span id="estadoCarga" class="estado-carga"></span>
+                </div>
+
+                <div class="contenedor-tabla">
+                    <table class="tabla-cortes">
+                        <thead>
+                            <tr id="cabeceraTablaCortes"></tr>
+                        </thead>
+                        <tbody id="cuerpoTablaCortes"></tbody>
+                    </table>
+                    <p id="textoSinCortes" class="texto-sin-cortes oculto">No hay cortes con estos filtros.</p>
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <!-- VENTANA EMERGENTE: ficha / formulario de corte -->
+    <div class="overlay-ficha" id="overlayFicha">
+        <div class="popup-ficha" id="popupFicha">
+
+            <div class="cabecera-ficha" id="cabeceraFicha">
+                <span id="tituloCabeceraFicha">Corte</span>
+                <button class="btn-cerrar-ficha" id="btnCerrarFicha" type="button" aria-label="Cerrar">&times;</button>
+            </div>
+
+            <div id="contenidoFicha" class="cuerpo-ficha"></div>
+
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://componentes.idee.es/api-idee/vendor/browser-polyfill.js"></script>
+    <script src="https://componentes.idee.es/api-idee/js/apiidee.ol.min.js"></script>
+    <script src="https://componentes.idee.es/api-idee/js/configuration.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/panel.js"></script>
+    <script src="js/filtros.js"></script>
+    <script src="js/cortes.js"></script>
+
+</body>
+
+</html>

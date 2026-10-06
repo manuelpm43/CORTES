@@ -1,0 +1,177 @@
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: #eef2f5;
+}
+
+#contenedorAuth {
+    width: 100%;
+    max-width: 400px;
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+/* Cabecera con logo, mismos tonos que el visor */
+#cabeceraAuth {
+    background: #1f4e79;
+    color: #ffffff;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-radius: 6px 6px 0 0;
+}
+
+.logo-icono {
+    height: 44px;
+    width: 44px;
+    box-sizing: border-box;
+    padding: 4px;
+    background: #ffffff;
+    border-radius: 5px;
+}
+
+.logo-texto {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    line-height: 1;
+}
+
+#cabeceraAuth h1 {
+    margin: 0;
+    font-size: 24px;
+    letter-spacing: 1px;
+}
+
+#cabeceraAuth p {
+    margin: 2px 0 0 0;
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.oculto {
+    display: none !important;
+}
+
+/* Tarjeta del formulario */
+.tarjeta-auth {
+    background: #ffffff;
+    border: 1px solid #cfd6dd;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+}
+
+/* Pestañas Login / Registro */
+.pestanas-auth {
+    display: flex;
+}
+
+.pestana-auth {
+    flex: 1;
+    padding: 14px 10px;
+    border: none;
+    background: #edf3f7;
+    color: #556472;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.pestana-auth:hover {
+    background: #dfeaf2;
+}
+
+.pestana-auth.activa {
+    background: #ffffff;
+    color: #1f4e79;
+    border-bottom: 2px solid #2589bd;
+}
+
+/* Formulario */
+.formulario-auth {
+    padding: 22px 24px 24px;
+    display: flex;
+    flex-direction: column;
+}
+
+.campo-auth {
+    margin-bottom: 14px;
+}
+
+.campo-auth label {
+    display: block;
+    margin-bottom: 5px;
+    color: #556472;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.campo-auth input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 10px;
+    border: 1px solid #cfd6dd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.campo-auth input:focus {
+    outline: none;
+    border-color: #2589bd;
+    box-shadow: 0 0 0 2px rgba(37, 137, 189, 0.2);
+}
+
+/* Mensajes de error / éxito */
+.mensaje-auth {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    min-height: 16px;
+}
+
+.mensaje-auth.error {
+    color: #b3261e;
+}
+
+.mensaje-auth.exito {
+    color: #1a7f37;
+}
+
+/* Botón de envío */
+.btn-auth {
+    padding: 11px 10px;
+    border: none;
+    border-radius: 5px;
+    background: #1f4e79;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.18s ease, opacity 0.18s ease;
+}
+
+.btn-auth:hover {
+    background: #2589bd;
+}
+
+.btn-auth:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

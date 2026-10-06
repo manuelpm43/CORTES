@@ -43,6 +43,6 @@ GRANT SELECT ON cortes.v_cortes, cortes.v_cortes_activos TO cortes_app;
 -- Si se usa cortes_app, no hace falta nada más. Si se prefiere uno
 -- propio:
 --   CREATE ROLE cortes_geoserver LOGIN PASSWORD '...';
---   GRANT CONNECT ON DATABASE "BIDELAN_Nube" TO cortes_geoserver;
+--   GRANT CONNECT ON DATABASE <base_de_datos> TO cortes_geoserver;
 --   GRANT USAGE ON SCHEMA cortes TO cortes_geoserver;
 --   GRANT SELECT ON cortes.v_cortes, cortes.v_cortes_activos TO cortes_geoserver;
