@@ -28,7 +28,12 @@ $$;
 -- (GI20-2-1). Los tramos se unen en un único eje "CARRETERA-SENTIDO";
 -- los PK entre tramos quedan como hueco.
 -- ---------------------------------------------------------------------
-CREATE OR REPLACE VIEW cortes.v_ejes AS
+-- Se recrean (no CREATE OR REPLACE) para poder cambiar columnas y tipos.
+-- Solo dependen de ellas las funciones de este script y los GRANT del final.
+DROP VIEW IF EXISTS cortes.v_ejes_rango;
+DROP VIEW IF EXISTS cortes.v_ejes;
+
+CREATE VIEW cortes.v_ejes AS
 SELECT regexp_replace(e.eje_nomenclatura, '^([^-]+)-\d+-(\d+)$', '\1-\2') AS eje,
        ST_Transform(e.geom, 25830)                                        AS geom,
        e.eje_nomenclatura                                                 AS eje_origen
@@ -40,7 +45,7 @@ WHERE e.eje_nomenclatura IS NOT NULL
 -- monótona dentro de cada parte, por lo que basta con sus extremos.
 -- m_crece = la M aumenta en el sentido en que está digitalizada la línea.
 -- tramos  = rangos de cada parte, para avisar de huecos (GI-20).
-CREATE OR REPLACE VIEW cortes.v_ejes_rango AS
+CREATE VIEW cortes.v_ejes_rango AS
 WITH partes AS (
     SELECT e.eje,
            least(ST_M(ST_StartPoint(d.geom)), ST_M(ST_EndPoint(d.geom)))    AS m_inicio,
