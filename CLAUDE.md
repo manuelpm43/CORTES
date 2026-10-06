@@ -29,7 +29,7 @@ Comprobaciones en [docs/verificacion_fase1.sql](docs/verificacion_fase1.sql).
 
 ## Fases
 1. SQL y segmentación ✔ (v0.1)
-2. API con auth
+2. API con auth ✔ (v0.2, rutas en [backend/README.md](backend/README.md))
 3. Visor
 4. Importación del Excel
 5. Admin y despliegue (`cortes.geospatiallab.xyz`, nginx, PM2 `cortes-api` en el puerto 4100, `/opt/cortes`)
